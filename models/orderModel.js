@@ -35,14 +35,20 @@ const createOrder = async (orderData, itemsData) => {
       VALUES ?
     `;
 
-    const itemValues = itemsData.map(item => [
-      orderId,
-      item.menu_item_id || null,
-      item.item_name,
-      item.quantity,
-      item.unit_price,
-      item.quantity * item.unit_price
-    ]);
+    const itemValues = itemsData.map(item => {
+      const qty = parseInt(item.quantity || 1, 10);
+      const price = parseFloat(item.unit_price || item.price || 0);
+      const sub = parseFloat(item.subtotal || (qty * price) || 0);
+      const name = item.item_name || item.name || 'Delicious Dish';
+      return [
+        orderId,
+        item.menu_item_id || null,
+        name,
+        qty,
+        price,
+        sub
+      ];
+    });
 
     await connection.query(insertItemQuery, [itemValues]);
 
