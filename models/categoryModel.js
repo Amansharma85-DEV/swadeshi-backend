@@ -19,9 +19,11 @@ const createCategory = async (name, description) => {
 };
 
 const updateCategory = async (id, name, description) => {
+  const existing = await getCategoryById(id);
+  const updatedDesc = (description !== undefined && description !== null) ? description : (existing ? existing.description : null);
   const [result] = await pool.query(
     'UPDATE categories SET name = ?, description = ? WHERE id = ?',
-    [name, description || null, id]
+    [name, updatedDesc, id]
   );
   return result.affectedRows > 0;
 };
