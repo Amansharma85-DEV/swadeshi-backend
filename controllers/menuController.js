@@ -65,7 +65,7 @@ const createMenuItem = async (req, res, next) => {
     }
 
     const newItem = await menuModel.createMenuItem({
-      category_id: parseInt(category_id, 10),
+      category_id: parseInt(category_id || 1, 10),
       name,
       description,
       price: parseFloat(price),
