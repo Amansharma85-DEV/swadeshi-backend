@@ -5,7 +5,7 @@ const createOrder = async (orderData, itemsData) => {
   try {
     await connection.beginTransaction();
 
-    const orderCode = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderCode = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
     const insertOrderQuery = `
       INSERT INTO orders (order_code, customer_name, customer_phone, customer_address, customer_note,

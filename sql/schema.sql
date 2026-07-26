@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
 -- 4. Orders Table
 CREATE TABLE IF NOT EXISTS orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  order_code VARCHAR(20) NOT NULL UNIQUE,
+  order_code VARCHAR(50) NOT NULL UNIQUE,
   customer_name VARCHAR(100) NOT NULL,
   customer_phone VARCHAR(20) NOT NULL,
   customer_address TEXT NOT NULL,
