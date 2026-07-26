@@ -4,7 +4,7 @@ USE swadeshi_db;
 
 -- Insert default admin user (password is 'admin123' hashed with bcrypt)
 INSERT INTO admins (name, email, password)
-VALUES ('Admin User', 'admin@swadeshikitchen.com', '$2a$10$wZk0xWz6K9K3H7WwJgZ/7.n7yVvO4.rG0Lq2aTj/xPZ1NqT0Yl3mO')
+VALUES ('Admin User', 'admin@swadeshikitchen.com', '$2a$10$4JFIObYNmqtJH8OTm2cDgO0FpN9HN0kYRpu3Kl5Y/9l9TpiZuIU5m')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 -- Insert initial categories
