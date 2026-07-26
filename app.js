@@ -31,21 +31,9 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// CORS Configuration - Restrict to allowed frontend origin
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'https://amansharma85-dev.github.io',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-];
-
+// CORS Configuration - Allow all frontend origins (GitHub Pages, localhost 3000/3001/5173)
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy error: Origin ${origin} not allowed`));
-    }
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
