@@ -1,5 +1,13 @@
 const pool = require('../config/db');
 
+const ensureSchema = async () => {
+  try {
+    await pool.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
+  } catch (e) {
+    // Ignore if column already LONGTEXT
+  }
+};
+
 const getAllMenuItems = async () => {
   const query = `
     SELECT m.*, c.name as category_name
@@ -23,6 +31,7 @@ const getMenuItemById = async (id) => {
 };
 
 const createMenuItem = async (data) => {
+  await ensureSchema();
   const { category_id, name, description, price, image_url, s3_key, tag, is_veg, is_bestseller, is_available } = data;
   const query = `
     INSERT INTO menu_items (category_id, name, description, price, image_url, s3_key, tag, is_veg, is_bestseller, is_available)
@@ -44,6 +53,7 @@ const createMenuItem = async (data) => {
 };
 
 const updateMenuItem = async (id, data) => {
+  await ensureSchema();
   const { category_id, name, description, price, image_url, s3_key, tag, is_veg, is_bestseller, is_available } = data;
   const query = `
     UPDATE menu_items
