@@ -40,11 +40,41 @@ const getMenuItemById = async (req, res, next) => {
     }
     res.status(200).json({
       success: true,
-      message: 'Menu item fetched successfully',
-      data: { item }
+      data: { menuItem: item }
     });
   } catch (error) {
     next(error);
+  }
+};
+
+const uploadImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file uploaded'
+      });
+    }
+
+    let imageUrl = '';
+    if (req.file.location) {
+      imageUrl = req.file.location;
+    } else {
+      const host = req.get('host');
+      const protocol = req.protocol;
+      imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: {
+        url: imageUrl,
+        filename: req.file.filename || req.file.key
+      }
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -61,26 +91,27 @@ const createMenuItem = async (req, res, next) => {
         s3_key = req.file.key;
       } else {
         image_url = `/uploads/${req.file.filename}`;
+        s3_key = null;
       }
     }
 
     const newItem = await menuModel.createMenuItem({
-      category_id: parseInt(category_id || 1, 10),
+      category_id: parseInt(category_id, 10),
       name,
-      description,
+      description: description || null,
       price: parseFloat(price),
       image_url,
       s3_key,
       tag: tag || 'Standard',
-      is_veg: is_veg === 'true' || is_veg === true,
-      is_bestseller: is_bestseller === 'true' || is_bestseller === true,
-      is_available: is_available !== undefined ? (is_available === 'true' || is_available === true) : true
+      is_veg: is_veg === undefined ? true : (is_veg === 'true' || is_veg === true),
+      is_bestseller: is_bestseller === undefined ? false : (is_bestseller === 'true' || is_bestseller === true),
+      is_available: is_available === undefined ? true : (is_available === 'true' || is_available === true)
     });
 
     res.status(201).json({
       success: true,
       message: 'Menu item created successfully',
-      data: { item: newItem }
+      data: { menuItem: newItem }
     });
   } catch (error) {
     next(error);
@@ -102,11 +133,10 @@ const updateMenuItem = async (req, res, next) => {
 
     const { category_id, name, description, price, tag, is_veg, is_bestseller, is_available, image_url: bodyUrl } = req.body;
 
-    let image_url = bodyUrl || existingItem.image_url;
+    let image_url = bodyUrl !== undefined ? bodyUrl : existingItem.image_url;
     let s3_key = existingItem.s3_key;
 
     if (req.file) {
-      // If a new file is uploaded, delete old S3 object if present
       if (existingItem.s3_key) {
         await deleteS3Image(existingItem.s3_key);
       }
@@ -175,6 +205,7 @@ const deleteMenuItem = async (req, res, next) => {
 module.exports = {
   getMenu,
   getMenuItemById,
+  uploadImage,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem

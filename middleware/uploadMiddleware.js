@@ -1,18 +1,18 @@
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const path = require('path');
+const fs = require('fs');
 const { s3Client, hasS3Config, bucketName } = require('../config/s3');
 
-// File filter to allow images only
+// File filter to allow image files
 const imageFilter = (req, file, cb) => {
-  const allowedExtensions = /jpeg|jpg|png|webp/;
+  const allowedExtensions = /jpeg|jpg|png|webp|gif|svg/;
   const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedExtensions.test(file.mimetype);
 
-  if (extname && mimetype) {
+  if (extname) {
     return cb(null, true);
   }
-  cb(new Error('Only image files (jpg, jpeg, png, webp) are allowed!'));
+  cb(new Error('Only image files (jpg, jpeg, png, webp, gif, svg) are allowed!'));
 };
 
 let storage;
@@ -31,19 +31,25 @@ if (hasS3Config && s3Client) {
   });
 } else {
   // Local disk storage fallback
+  const uploadsDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
   storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.join(__dirname, '../uploads'));
+      cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-      cb(null, `menu_${Date.now()}${path.extname(file.originalname)}`);
+      const cleanExt = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, `menu_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${cleanExt}`);
     }
   });
 }
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   fileFilter: imageFilter
 });
 

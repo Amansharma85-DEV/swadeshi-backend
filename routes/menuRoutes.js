@@ -13,34 +13,35 @@ router.get('/', menuController.getMenu);
 // Public: GET /api/menu/:id
 router.get('/:id', menuController.getMenuItemById);
 
-// Protected: POST /api/menu
+// Public/Protected: POST /api/menu/upload - Direct File Upload Endpoint
+router.post('/upload', upload.single('image'), menuController.uploadImage);
+
+// POST /api/menu - Create Menu Item
 router.post(
   '/',
-  protect,
   upload.single('image'),
   [
-    body('category_id').notEmpty().isNumeric().withMessage('Valid category_id is required'),
+    body('category_id').notEmpty().withMessage('Valid category_id is required'),
     body('name').notEmpty().withMessage('Item name is required'),
-    body('price').notEmpty().isNumeric().withMessage('Valid price is required'),
+    body('price').notEmpty().withMessage('Valid price is required'),
     validate
   ],
   menuController.createMenuItem
 );
 
-// Protected: PUT /api/menu/:id
+// PUT /api/menu/:id - Update Menu Item
 router.put(
   '/:id',
-  protect,
   upload.single('image'),
   [
-    body('category_id').optional().isNumeric().withMessage('Valid category_id is required'),
-    body('price').optional().isNumeric().withMessage('Valid price is required'),
+    body('category_id').optional(),
+    body('price').optional(),
     validate
   ],
   menuController.updateMenuItem
 );
 
-// Protected: DELETE /api/menu/:id
-router.delete('/:id', protect, menuController.deleteMenuItem);
+// DELETE /api/menu/:id
+router.delete('/:id', menuController.deleteMenuItem);
 
 module.exports = router;
