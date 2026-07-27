@@ -30,13 +30,43 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// CORS Configuration - Allow all frontend origins (GitHub Pages, localhost 3000/3001/5173)
-app.use(cors({
-  origin: true,
+// Robust CORS Middleware Configuration
+const corsOptions = {
+  origin: true, // Allow any origin dynamically while reflecting it in response
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Cache-Control',
+    'Pragma',
+    'Expires',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'Authorization', 'Cache-Control'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// Explicit Fallback Headers Middleware for Preflight OPTIONS Requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, Pragma, Expires, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
 
 // Body Parsers (Increased to 50mb for high-res photo uploads)
 app.use(express.json({ limit: '50mb' }));
@@ -58,6 +88,26 @@ const apiLimiter = rateLimit({
 
 app.use('/api', apiLimiter);
 
+// Health Check Endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Swadeshi Kitchen API server is healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Database Auto-Migration / Column Verification Endpoint
+const pool = require('./config/db');
+app.get('/api/migrate-db', async (req, res) => {
+  try {
+    await pool.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
+    res.status(200).json({ success: true, message: 'Database schema migration complete: image_url is LONGTEXT' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -75,7 +125,7 @@ function readSettingsFile() {
       return JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
     }
   } catch (e) {
-    console.error('Error reading settings file:', e);
+    console.error('Error reading settings.json:', e);
   }
   return {};
 }
@@ -86,60 +136,32 @@ function writeSettingsFile(data) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(settingsFilePath, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {
-    console.error('Error writing settings file:', e);
+    console.error('Error writing settings.json:', e);
   }
 }
 
 app.get('/api/settings/:key', (req, res) => {
-  const store = readSettingsFile();
-  const key = req.params.key;
+  const settings = readSettingsFile();
+  const val = settings[req.params.key];
   res.status(200).json({
     success: true,
-    data: { key, value: store[key] || null }
+    data: { key: req.params.key, value: val !== undefined ? val : null }
   });
 });
 
 app.post('/api/settings/:key', (req, res) => {
-  const store = readSettingsFile();
-  const key = req.params.key;
-  store[key] = req.body.value;
-  writeSettingsFile(store);
+  const settings = readSettingsFile();
+  settings[req.params.key] = req.body.value;
+  writeSettingsFile(settings);
   res.status(200).json({
     success: true,
-    message: `Setting ${key} updated successfully`,
-    data: { key, value: store[key] }
+    message: `Setting '${req.params.key}' updated successfully`,
+    data: { key: req.params.key, value: req.body.value }
   });
 });
 
-// DB Schema Migration Endpoint
-app.get('/api/migrate-db', async (req, res) => {
-  try {
-    const pool = require('./config/db');
-    await pool.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
-    await pool.query('ALTER TABLE categories MODIFY COLUMN description LONGTEXT');
-    res.status(200).json({
-      success: true,
-      message: 'Database columns altered to LONGTEXT successfully'
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Swadeshi Kitchen API server is healthy',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 404 Route Handler
-app.use('*', (req, res) => {
+// 404 Handler for Undefined Routes
+app.use((req, res, next) => {
   res.status(404).json({
     success: false,
     message: `API endpoint ${req.originalUrl} not found`,
@@ -147,7 +169,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// Centralized Error Middleware
+// Global Error Handler Middleware
 app.use(errorHandler);
 
 module.exports = app;
