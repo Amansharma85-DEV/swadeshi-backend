@@ -65,6 +65,7 @@ const uploadImage = async (req, res, next) => {
       imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
     }
 
+    console.log('✅ Direct image upload success:', imageUrl);
     return res.status(200).json({
       success: true,
       message: 'Image uploaded successfully',
@@ -74,6 +75,7 @@ const uploadImage = async (req, res, next) => {
       }
     });
   } catch (err) {
+    console.error('❌ Direct image upload error:', err);
     next(err);
   }
 };
@@ -90,13 +92,17 @@ const createMenuItem = async (req, res, next) => {
         image_url = req.file.location;
         s3_key = req.file.key;
       } else {
-        image_url = `/uploads/${req.file.filename}`;
+        const host = req.get('host');
+        const protocol = req.protocol;
+        image_url = `${protocol}://${host}/uploads/${req.file.filename}`;
         s3_key = null;
       }
     }
 
+    console.log('📝 Creating menu item with image_url:', image_url);
+
     const newItem = await menuModel.createMenuItem({
-      category_id: parseInt(category_id, 10),
+      category_id: parseInt(category_id || 1, 10),
       name,
       description: description || null,
       price: parseFloat(price),
@@ -114,6 +120,7 @@ const createMenuItem = async (req, res, next) => {
       data: { menuItem: newItem }
     });
   } catch (error) {
+    console.error('❌ Error creating menu item:', error);
     next(error);
   }
 };
@@ -145,10 +152,14 @@ const updateMenuItem = async (req, res, next) => {
         image_url = req.file.location;
         s3_key = req.file.key;
       } else {
-        image_url = `/uploads/${req.file.filename}`;
+        const host = req.get('host');
+        const protocol = req.protocol;
+        image_url = `${protocol}://${host}/uploads/${req.file.filename}`;
         s3_key = null;
       }
     }
+
+    console.log(`📝 Updating menu item ID ${id} with image_url:`, image_url);
 
     await menuModel.updateMenuItem(id, {
       category_id: parseInt(category_id || existingItem.category_id, 10),
@@ -166,9 +177,10 @@ const updateMenuItem = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Menu item updated successfully',
-      data: {}
+      data: { id, image_url }
     });
   } catch (error) {
+    console.error(`❌ Error updating menu item ID ${id}:`, error);
     next(error);
   }
 };
