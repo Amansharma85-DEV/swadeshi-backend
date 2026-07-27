@@ -66,6 +66,52 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+// Universal Key-Value Settings Storage for Multi-Device Admin Sync
+const fs = require('fs');
+const settingsFilePath = path.join(__dirname, 'uploads', 'settings.json');
+
+function readSettingsFile() {
+  try {
+    if (fs.existsSync(settingsFilePath)) {
+      return JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Error reading settings file:', e);
+  }
+  return {};
+}
+
+function writeSettingsFile(data) {
+  try {
+    const dir = path.dirname(settingsFilePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(settingsFilePath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error writing settings file:', e);
+  }
+}
+
+app.get('/api/settings/:key', (req, res) => {
+  const store = readSettingsFile();
+  const key = req.params.key;
+  res.status(200).json({
+    success: true,
+    data: { key, value: store[key] || null }
+  });
+});
+
+app.post('/api/settings/:key', (req, res) => {
+  const store = readSettingsFile();
+  const key = req.params.key;
+  store[key] = req.body.value;
+  writeSettingsFile(store);
+  res.status(200).json({
+    success: true,
+    message: `Setting ${key} updated successfully`,
+    data: { key, value: store[key] }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
