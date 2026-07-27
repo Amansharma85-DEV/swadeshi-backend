@@ -3,7 +3,9 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// Only enable S3 if explicitly requested and valid credentials exist
 const hasS3Config = Boolean(
+  process.env.USE_S3_STORAGE === 'true' &&
   process.env.AWS_ACCESS_KEY_ID &&
   process.env.AWS_SECRET_ACCESS_KEY &&
   process.env.AWS_REGION &&
@@ -13,16 +15,21 @@ const hasS3Config = Boolean(
 let s3Client = null;
 
 if (hasS3Config) {
-  s3Client = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    }
-  });
-  console.log('✅ Amazon S3 Client initialized.');
+  try {
+    s3Client = new S3Client({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }
+    });
+    console.log('✅ Amazon S3 Client initialized.');
+  } catch (e) {
+    console.warn('⚠️ S3 Client initialization failed:', e.message);
+    s3Client = null;
+  }
 } else {
-  console.warn('⚠️ Amazon S3 credentials missing. File uploads will fallback to local storage or URL references.');
+  console.log('ℹ️ Local disk storage active for file uploads (/uploads).');
 }
 
-module.exports = { s3Client, hasS3Config, bucketName: process.env.AWS_S3_BUCKET };
+module.exports = { s3Client, hasS3Config: Boolean(s3Client), bucketName: process.env.AWS_S3_BUCKET };

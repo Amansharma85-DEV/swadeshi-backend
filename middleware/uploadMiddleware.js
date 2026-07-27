@@ -4,15 +4,19 @@ const path = require('path');
 const fs = require('fs');
 const { s3Client, hasS3Config, bucketName } = require('../config/s3');
 
-// File filter to allow image files
+// File filter accepting JPG, JPEG, PNG, WEBP, GIF, SVG
 const imageFilter = (req, file, cb) => {
-  const allowedExtensions = /jpeg|jpg|png|webp|gif|svg/;
-  const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+  if (!file) return cb(null, true);
+  
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExtensions = ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.svg'];
+  const allowedMimetypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
-  if (extname) {
+  if (allowedExtensions.includes(ext) || allowedMimetypes.includes(file.mimetype)) {
     return cb(null, true);
   }
-  cb(new Error('Only image files (jpg, jpeg, png, webp, gif, svg) are allowed!'));
+  
+  cb(new Error(`Invalid image format (${ext || file.mimetype}). Allowed formats: JPG, JPEG, PNG, WEBP, GIF, SVG.`));
 };
 
 let storage;
@@ -25,7 +29,8 @@ if (hasS3Config && s3Client) {
       cb(null, { fieldName: file.fieldname });
     },
     key: (req, file, cb) => {
-      const fileName = `menu-items/${Date.now()}_${path.basename(file.originalname)}`;
+      const cleanExt = path.extname(file.originalname).toLowerCase() || '.jpg';
+      const fileName = `menu-items/${Date.now()}_${Math.random().toString(36).substring(2, 7)}${cleanExt}`;
       cb(null, fileName);
     }
   });
@@ -41,7 +46,7 @@ if (hasS3Config && s3Client) {
       cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-      const cleanExt = path.extname(file.originalname).toLowerCase() || '.png';
+      const cleanExt = path.extname(file.originalname).toLowerCase() || '.jpg';
       cb(null, `menu_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${cleanExt}`);
     }
   });
