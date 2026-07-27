@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
 const morgan = require('morgan');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -14,17 +13,17 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-const errorHandler = require('./middleware/errorHandler');
+
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-// Security Headers
-app.use(helmet());
+// Security Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
 
-// Compression
-app.use(compression());
-
-// Request Logging
+// Logging Middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
@@ -39,9 +38,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body Parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body Parsers (Increased to 50mb for high-res photo uploads)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static uploads folder for fallback
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -49,7 +48,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Rate Limiter
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per window
+  max: 500, // Limit each IP to 500 requests per window
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes',
@@ -110,6 +109,24 @@ app.post('/api/settings/:key', (req, res) => {
     message: `Setting ${key} updated successfully`,
     data: { key, value: store[key] }
   });
+});
+
+// DB Schema Migration Endpoint
+app.get('/api/migrate-db', async (req, res) => {
+  try {
+    const pool = require('./config/db');
+    await pool.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
+    await pool.query('ALTER TABLE categories MODIFY COLUMN description LONGTEXT');
+    res.status(200).json({
+      success: true,
+      message: 'Database columns altered to LONGTEXT successfully'
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 });
 
 // Health check endpoint
