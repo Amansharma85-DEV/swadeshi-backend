@@ -15,8 +15,14 @@ const pool = mysql.createPool({
 });
 
 pool.getConnection()
-  .then((connection) => {
+  .then(async (connection) => {
     console.log('✅ Connected to MySQL database successfully.');
+    try {
+      await connection.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
+      console.log('✅ Altered menu_items.image_url column to LONGTEXT for image uploads.');
+    } catch (e) {
+      console.warn('Note on menu_items alter:', e.message);
+    }
     connection.release();
   })
   .catch((err) => {
