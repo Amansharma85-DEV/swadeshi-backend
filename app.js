@@ -97,6 +97,26 @@ app.get('/health', (req, res) => {
   });
 });
 
+// AWS Configuration & S3 Status Diagnostic Endpoint
+app.get('/api/aws-status', (req, res) => {
+  const key = process.env.AWS_ACCESS_KEY_ID || '';
+  const maskedKey = key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : 'NOT_SET';
+  
+  res.status(200).json({
+    success: true,
+    env: {
+      NODE_ENV: process.env.NODE_ENV || 'production',
+      USE_S3_STORAGE: process.env.USE_S3_STORAGE || 'false',
+      AWS_ACCESS_KEY_ID_EXISTS: Boolean(process.env.AWS_ACCESS_KEY_ID),
+      AWS_ACCESS_KEY_ID_MASKED: maskedKey,
+      AWS_SECRET_ACCESS_KEY_EXISTS: Boolean(process.env.AWS_SECRET_ACCESS_KEY),
+      AWS_REGION: process.env.AWS_REGION || 'ap-south-1',
+      AWS_S3_BUCKET: process.env.AWS_S3_BUCKET || 'swadeshi-kitchen-assets'
+    },
+    s3_active: Boolean(require('./config/s3').s3Client)
+  });
+});
+
 // Database Auto-Migration / Column Verification Endpoint
 const pool = require('./config/db');
 app.get('/api/migrate-db', async (req, res) => {
