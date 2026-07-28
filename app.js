@@ -18,6 +18,9 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// Trust Nginx reverse proxy headers (X-Forwarded-Proto, X-Forwarded-For)
+app.set('trust proxy', true);
+
 // Security Middleware
 app.use(helmet({
   crossOriginResourcePolicy: false,

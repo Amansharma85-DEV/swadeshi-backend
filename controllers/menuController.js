@@ -47,6 +47,15 @@ const getMenuItemById = async (req, res, next) => {
   }
 };
 
+// Helper to build secure HTTPS image URL for uploads
+const buildImageUrl = (req, file) => {
+  if (!file) return '';
+  if (file.location) return file.location;
+  const host = req.get('host') || 'swadeshikitchen.shop';
+  const proto = (req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' || host.includes('swadeshikitchen.shop')) ? 'https' : req.protocol;
+  return `${proto}://${host}/uploads/${file.filename}`;
+};
+
 const uploadImage = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -56,14 +65,7 @@ const uploadImage = async (req, res, next) => {
       });
     }
 
-    let imageUrl = '';
-    if (req.file.location) {
-      imageUrl = req.file.location;
-    } else {
-      const host = req.get('host');
-      const protocol = req.protocol;
-      imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
-    }
+    const imageUrl = buildImageUrl(req, req.file);
 
     console.log('✅ Direct image upload success:', imageUrl);
     return res.status(200).json({
@@ -88,15 +90,8 @@ const createMenuItem = async (req, res, next) => {
     let s3_key = null;
 
     if (req.file) {
-      if (req.file.location) {
-        image_url = req.file.location;
-        s3_key = req.file.key;
-      } else {
-        const host = req.get('host');
-        const protocol = req.protocol;
-        image_url = `${protocol}://${host}/uploads/${req.file.filename}`;
-        s3_key = null;
-      }
+      image_url = buildImageUrl(req, req.file);
+      s3_key = req.file.key || null;
     }
 
     console.log('📝 Creating menu item with image_url:', image_url);
@@ -147,16 +142,8 @@ const updateMenuItem = async (req, res, next) => {
       if (existingItem.s3_key) {
         await deleteS3Image(existingItem.s3_key);
       }
-
-      if (req.file.location) {
-        image_url = req.file.location;
-        s3_key = req.file.key;
-      } else {
-        const host = req.get('host');
-        const protocol = req.protocol;
-        image_url = `${protocol}://${host}/uploads/${req.file.filename}`;
-        s3_key = null;
-      }
+      image_url = buildImageUrl(req, req.file);
+      s3_key = req.file.key || null;
     }
 
     console.log(`📝 Updating menu item ID ${id} with image_url:`, image_url);
