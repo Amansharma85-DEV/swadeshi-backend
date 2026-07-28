@@ -26,8 +26,8 @@ const login = async (req, res, next) => {
 
     const token = jwt.sign(
       { id: admin.id, email: admin.email, name: admin.name },
-      process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || 'swadeshi_prod_secret_key_2026',
+      { expiresIn: '30d' }
     );
 
     res.status(200).json({
