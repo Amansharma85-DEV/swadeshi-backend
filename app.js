@@ -15,6 +15,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const errorHandler = require('./middleware/errorHandler');
+const { protect } = require('./middleware/authMiddleware');
 
 const app = express();
 
@@ -100,8 +101,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// AWS Configuration & S3 Status Diagnostic Endpoint
-app.get('/api/aws-status', (req, res) => {
+// AWS Configuration & S3 Status Diagnostic Endpoint (Protected)
+app.get('/api/aws-status', protect, (req, res) => {
   const key = process.env.AWS_ACCESS_KEY_ID || '';
   const maskedKey = key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : 'NOT_SET';
   
@@ -120,14 +121,14 @@ app.get('/api/aws-status', (req, res) => {
   });
 });
 
-// Database Auto-Migration / Column Verification Endpoint
+// Database Auto-Migration / Column Verification Endpoint (Protected)
 const pool = require('./config/db');
-app.get('/api/migrate-db', async (req, res) => {
+app.get('/api/migrate-db', protect, async (req, res) => {
   try {
     await pool.query('ALTER TABLE menu_items MODIFY COLUMN image_url LONGTEXT');
     res.status(200).json({ success: true, message: 'Database schema migration complete: image_url is LONGTEXT' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Database migration error' });
   }
 });
 
