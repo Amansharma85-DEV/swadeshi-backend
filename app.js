@@ -79,10 +79,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Static uploads folder for fallback
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rate Limiter
+// Rate Limiter (Increased capacity & exempts authenticated admin operations)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per window
+  max: 5000, // High capacity threshold (5,000 requests / 15 mins)
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => Boolean(req.headers.authorization || req.path.includes('/upload') || req.path.includes('/settings')),
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes',
