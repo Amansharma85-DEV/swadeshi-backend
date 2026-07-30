@@ -85,7 +85,29 @@ const getAllOrders = async (status, search) => {
   query += ' ORDER BY created_at DESC';
 
   const [orders] = await pool.query(query, params);
-  return orders;
+  if (orders.length === 0) return [];
+
+  const orderIds = orders.map(o => o.id);
+  const [allItems] = await pool.query('SELECT * FROM order_items WHERE order_id IN (?)', [orderIds]);
+
+  const itemsByOrderId = {};
+  allItems.forEach(item => {
+    if (!itemsByOrderId[item.order_id]) itemsByOrderId[item.order_id] = [];
+    itemsByOrderId[item.order_id].push({
+      id: item.id,
+      name: item.item_name,
+      item_name: item.item_name,
+      quantity: item.quantity,
+      price: parseFloat(item.unit_price || 0),
+      unit_price: parseFloat(item.unit_price || 0),
+      subtotal: parseFloat(item.subtotal || 0)
+    });
+  });
+
+  return orders.map(order => ({
+    ...order,
+    items: itemsByOrderId[order.id] || []
+  }));
 };
 
 const getOrderById = async (id) => {
@@ -94,7 +116,15 @@ const getOrderById = async (id) => {
 
   const order = orders[0];
   const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
-  order.items = items;
+  order.items = items.map(item => ({
+    id: item.id,
+    name: item.item_name,
+    item_name: item.item_name,
+    quantity: item.quantity,
+    price: parseFloat(item.unit_price || 0),
+    unit_price: parseFloat(item.unit_price || 0),
+    subtotal: parseFloat(item.subtotal || 0)
+  }));
 
   return order;
 };
