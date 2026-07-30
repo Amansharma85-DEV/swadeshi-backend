@@ -95,8 +95,8 @@ const apiLimiter = rateLimit({
 
 app.use('/api', apiLimiter);
 
-// Health Check Endpoint
-app.get('/health', (req, res) => {
+// Health Check Endpoints
+app.get(['/health', '/api/health'], (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Swadeshi Kitchen API server is healthy',
