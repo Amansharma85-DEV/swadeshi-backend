@@ -35,14 +35,18 @@ const createOrder = async (orderData, itemsData) => {
       VALUES ?
     `;
 
+    const [validMenuItems] = await connection.query('SELECT id FROM menu_items');
+    const validIds = new Set(validMenuItems.map(m => m.id));
+
     const itemValues = itemsData.map(item => {
       const qty = parseInt(item.quantity || 1, 10);
       const price = parseFloat(item.unit_price || item.price || 0);
       const sub = parseFloat(item.subtotal || (qty * price) || 0);
       const name = item.item_name || item.name || 'Delicious Dish';
+      const menuItemId = item.menu_item_id && validIds.has(Number(item.menu_item_id)) ? Number(item.menu_item_id) : null;
       return [
         orderId,
-        item.menu_item_id || null,
+        menuItemId,
         name,
         qty,
         price,
